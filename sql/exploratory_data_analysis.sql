@@ -6,7 +6,7 @@ FROM layoffs_staging2;
 SELECT MAX(total_laid_off), MAX(percentage_laid_off)
 FROM layoffs_staging2;
 
--- Find companies who have laid off 100 percent of their workforce
+-- Find companies that have laid off 100 percent of their workforce
 SELECT *
 FROM layoffs_staging2
 WHERE percentage_laid_off = 1
@@ -133,10 +133,10 @@ WITH
     (
         SELECT
             company,
-            YEAR(date) AS calendar_year,
+            YEAR(date) AS years,
             SUM(total_laid_off) as total_layoffs
         FROM layoffs_staging2
-        GROUP BY company, calendar_year
+        GROUP BY company, years
     ),
     Company_Year_Rank
     AS
@@ -153,4 +153,52 @@ SELECT *
 FROM Company_Year_Rank
 WHERE Ranking <= 5
 ;
--- These results show the top 5 companies with the biggest layoffs
+-- These results (above) show the top 5 companies with the biggest layoffs
+
+
+SELECT
+    months,
+    total_layoffs
+FROM
+    (SELECT
+        SUBSTRING(date, 1,7) AS months,
+        total_laid_off,
+        SUM(total_laid_off) OVER (PARTITION BY SUBSTRING(date, 1,7) ORDER BY total_laid_off) as total_layoffs
+    FROM layoffs_staging2
+    WHERE total_laid_off IS NOT NULL) as sub
+GROUP BY months, total_layoffs;
+
+WITH
+    monthly
+    AS
+    (
+        SELECT
+            DATE_FORMAT(date, '%Y-%m') AS months,
+            SUM(total_laid_off) AS monthly_layoffs
+        FROM layoffs_staging2
+        WHERE total_laid_off IS NOT NULL
+        GROUP BY months
+    )
+SELECT
+    months,
+    monthly_layoffs,
+    SUM(monthly_layoffs) OVER (ORDER BY months) as rolling_layoffs
+FROM monthly
+ORDER BY months;
+
+
+
+-- Find the total number of employees each company originally had (for those who provide necessary values)
+WITH
+    total_employees
+    AS
+    (
+        SELECT company, industry, total_laid_off, percentage_laid_off
+        FROM layoffs_staging2
+        WHERE 
+        total_laid_off IS NOT NULL AND
+            percentage_laid_off IS NOT NULL
+    )
+SELECT *,
+    ROUND(total_laid_off / percentage_laid_off,0) AS employees_before_layoffs
+FROM total_employees;
