@@ -1,4 +1,4 @@
-# 📉 Data Cleaning in SQL: Layoffs Dataset
+# 📉 Data Cleaning & Exploratory Data Analysis in SQL: Sample Layoffs Dataset
 
 ## 📝 Introduction
 
